@@ -376,7 +376,10 @@ function renderTable() {
   tableBody.querySelectorAll('input[data-edit="qty"]').forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const i = Number(e.currentTarget.dataset.idx);
-      const v = Math.max(0, Number(e.currentTarget.value || 0));
+      const raw = e.currentTarget.value;
+      if (raw === "") return; // consenti di cancellare e riscrivere
+
+      const v = Math.max(0, Number(raw || 0));
       state.cart[i].quantity = v;
       renderTable();
       recomputeGrandTotal();
@@ -385,7 +388,10 @@ function renderTable() {
   tableBody.querySelectorAll('input[data-edit="alloy"]').forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const i = Number(e.currentTarget.dataset.idx);
-      const v = Number(e.currentTarget.value || 0);
+      const raw = e.currentTarget.value;
+      if (raw === "") return; // consenti di cancellare e riscrivere
+
+      const v = Number(raw || 0);
       state.cart[i].alloySurchargePerKg = v;
       renderTable();
       recomputeGrandTotal();
