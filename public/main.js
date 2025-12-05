@@ -322,12 +322,14 @@ function renderTable() {
     const base = Number(r.basePricePerM ?? r.basePricePerPc ?? 0);
     const peso = Number(r.pesoKgM ?? 0);
     const alloy = Number(r.alloySurchargePerKg ?? 0);
-
+    const canEditAlloy =
+      isTube ||
+      Number.isFinite(r.pesoKgM) ||
+      Number.isFinite(r.alloySurchargePerKg);
     // ricalcola pu/tot in base allo stato attuale
-    const unit = isTube ? base + alloy * peso : base;
-    const qty = Number(r.quantity ?? 0);
+    const unit = canEditAlloy ? base + alloy * peso : base;
+    const qty = Math.max(0, Number(r.quantity ?? 0));
     const lineTotal = unit * qty;
-
     // salva nello state (mantiene sempre coerenti i numeri)
     r.unitPrice = unit;
     r.lineTotal = lineTotal;
@@ -341,17 +343,17 @@ function renderTable() {
       <td>${fmt(base)}</td>
       <td>
         ${
-          isTube
-            ? `<input type="number" class="form-control form-control-sm" 
-                   step="0.01" data-edit="alloy" data-idx="${idx}" 
-                   value="${alloy}">`
+          canEditAlloy
+            ? `<input type="number" class="form-control form-control-sm"
+                   step="0.01" data-edit="alloy" data-idx="${idx}"
+                   value="${Number.isFinite(alloy) ? alloy : 0}">`
             : `-`
         }
       </td>
       <td>${fmt(unit)}</td>
       <td>
-        <input type="number" class="form-control form-control-sm" 
-               step="1" min="1" data-edit="qty" data-idx="${idx}" 
+      <input type="number" class="form-control form-control-sm"
+               step="1" min="0" data-edit="qty" data-idx="${idx}"
                value="${qty}">
       </td>
       <td>${fmt(lineTotal)}</td>
@@ -374,7 +376,7 @@ function renderTable() {
   tableBody.querySelectorAll('input[data-edit="qty"]').forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const i = Number(e.currentTarget.dataset.idx);
-      const v = Math.max(1, Number(e.currentTarget.value || 1));
+      const v = Math.max(0, Number(e.currentTarget.value || 0));
       state.cart[i].quantity = v;
       renderTable();
       recomputeGrandTotal();
@@ -974,13 +976,19 @@ document.addEventListener("DOMContentLoaded", () => {
         basePricePerPc: r.prezzoPienoM ?? null, // pezzi €/pc da M
 
         // altri campi tecnici se presenti
-        pesoKgM: r.pesoKgM ?? r.peso ?? null,
-        alloySurchargePerKg: r.alloySurchargePerKg ?? r.asKg ?? null,
+        pesoKgM:
+          r.pesoKgM != null || r.peso != null
+            ? Number(r.pesoKgM ?? r.peso)
+            : null,
+        alloySurchargePerKg:
+          r.alloySurchargePerKg != null || r.asKg != null
+            ? Number(r.alloySurchargePerKg ?? r.asKg)
+            : null,
 
         // P.U. = prezzo pieno (M)
         unitPrice: r.prezzoPienoM ?? r.unitPrice ?? r.pu ?? null,
 
-        quantity: Number(r.quantity ?? r.qty ?? 1),
+        quantity: Number(r.quantity ?? r.qty ?? 1) || 0,
 
         // ricalcoleremo i totali a renderTable(); se vuoi mantenerli:
         lineTotal: r.lineTotal ?? r.tot ?? null,
