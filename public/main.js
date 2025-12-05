@@ -314,26 +314,41 @@ function recomputeGrandTotal() {
   if (grandTotalEl) grandTotalEl.textContent = fmt(sum);
 }
 
+function computePricing(r) {
+  const isTube = r.itemType === "Tubes" || r.itemType === "Coassiali Tubes";
+  const base = Number(r.basePricePerM ?? r.basePricePerPc ?? 0);
+  const peso = Number(r.pesoKgM ?? 0);
+  const alloy = Number(r.alloySurchargePerKg ?? 0);
+  const canEditAlloy =
+    isTube ||
+    Number.isFinite(r.pesoKgM) ||
+    Number.isFinite(r.alloySurchargePerKg);
+  const unit = canEditAlloy ? base + alloy * peso : base;
+  const qty = Math.max(0, Number(r.quantity ?? 0));
+  const lineTotal = unit * qty;
+
+  // salva nello state (mantiene sempre coerenti i numeri)
+  r.unitPrice = unit;
+  r.lineTotal = lineTotal;
+
+  return { base, peso, alloy, canEditAlloy, unit, qty, lineTotal };
+}
+
+function updateRowTotals(tr, idx) {
+  const { unit, lineTotal } = computePricing(state.cart[idx]);
+  const unitCell = tr.querySelector('[data-field="unit"]');
+  if (unitCell) unitCell.textContent = fmt(unit);
+  const totalCell = tr.querySelector('[data-field="total"]');
+  if (totalCell) totalCell.textContent = fmt(lineTotal);
+  recomputeGrandTotal();
+}
+
 function renderTable() {
   tableBody.innerHTML = "";
 
   state.cart.forEach((r, idx) => {
-    const isTube = r.itemType === "Tubes" || r.itemType === "Coassiali Tubes";
-    const base = Number(r.basePricePerM ?? r.basePricePerPc ?? 0);
-    const peso = Number(r.pesoKgM ?? 0);
-    const alloy = Number(r.alloySurchargePerKg ?? 0);
-    const canEditAlloy =
-      isTube ||
-      Number.isFinite(r.pesoKgM) ||
-      Number.isFinite(r.alloySurchargePerKg);
-    // ricalcola pu/tot in base allo stato attuale
-    const unit = canEditAlloy ? base + alloy * peso : base;
-    const qty = Math.max(0, Number(r.quantity ?? 0));
-    const lineTotal = unit * qty;
-    // salva nello state (mantiene sempre coerenti i numeri)
-    r.unitPrice = unit;
-    r.lineTotal = lineTotal;
-
+    const { base, alloy, canEditAlloy, unit, qty, lineTotal } =
+      computePricing(r);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${(idx + 1) * 100}</td>
@@ -350,13 +365,13 @@ function renderTable() {
             : `-`
         }
       </td>
-      <td>${fmt(unit)}</td>
+     <td data-field="unit">${fmt(unit)}</td>
       <td>
       <input type="number" class="form-control form-control-sm"
                step="1" min="0" data-edit="qty" data-idx="${idx}"
                value="${qty}">
       </td>
-      <td>${fmt(lineTotal)}</td>
+      <td data-field="total">${fmt(lineTotal)}</td>
       <td><button class="btn btn-sm btn-outline-danger" data-idx="${idx}">X</button></td>
     `;
     tableBody.appendChild(tr);
@@ -377,65 +392,21 @@ function renderTable() {
     inp.addEventListener("input", (e) => {
       const i = Number(e.currentTarget.dataset.idx);
       const raw = e.currentTarget.value;
-      if (raw === "") return; // consenti di cancellare e riscrivere
-
-      const v = Math.max(0, Number(raw || 0));
-      state.cart[i].quantity = v;
-      renderTable();
-      recomputeGrandTotal();
+      state.cart[i].quantity = raw === "" ? "" : Math.max(0, Number(raw || 0));
+      updateRowTotals(e.currentTarget.closest("tr"), i);
     });
   });
   tableBody.querySelectorAll('input[data-edit="alloy"]').forEach((inp) => {
     inp.addEventListener("input", (e) => {
       const i = Number(e.currentTarget.dataset.idx);
       const raw = e.currentTarget.value;
-      if (raw === "") return; // consenti di cancellare e riscrivere
-
-      const v = Number(raw || 0);
-      state.cart[i].alloySurchargePerKg = v;
-      renderTable();
-      recomputeGrandTotal();
+      state.cart[i].alloySurchargePerKg = raw === "" ? "" : Number(raw || 0);
+      updateRowTotals(e.currentTarget.closest("tr"), i);
     });
   });
 
   recomputeGrandTotal();
 }
-
-/* function renderTable() {
-  tableBody.innerHTML = "";
-  state.cart.forEach((r, idx) => {
-    const base = r.basePricePerM ?? r.basePricePerPc ?? 0;
-    const alloyDisplay =
-      r.itemType === "Tubes" || r.itemType === "Coassiali Tubes"
-        ? fmt(r.alloySurchargePerKg || 0)
-        : "-";
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${(idx + 1) * 100}</td>
-      <td>${r.itemType}</td>
-      <td>${r.description || ""}</td>
-      <td>${r.code || ""}</td>
-      <td>${fmt(base)}</td>
-      <td>${alloyDisplay}</td>
-      <td>${fmt(r.unitPrice || 0)}</td>
-      <td>${fmt(r.quantity || 0)}</td>
-      <td>${fmt(r.lineTotal || 0)}</td>
-      <td><button class="btn btn-sm btn-outline-danger" data-idx="${idx}">X</button></td>
-    `;
-    tableBody.appendChild(tr);
-  });
-
-  // cancella riga
-  tableBody.querySelectorAll("button[data-idx]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const i = Number(e.currentTarget.dataset.idx);
-      state.cart.splice(i, 1);
-      renderTable();
-      recomputeGrandTotal();
-    });
-  });
-} */
 
 // ---- Add Row --------------------------------------------------------------
 function attachAddHandler() {
