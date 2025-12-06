@@ -89,7 +89,7 @@ app.post("/api/export", async (req, res) => {
       { header: "U.M.", key: "um", width: 8 }, // D
       { header: "Quantità", key: "qty", width: 10 }, // E
       { header: "Prezzo unitario base €/m o €/pz", key: "base", width: 24 }, // F
-      { header: "Peso tubo", key: "peso", width: 12 }, // G
+      { header: "Peso tubo Kg/m", key: "peso", width: 12 }, // G
       { header: "Alloy surcharge in €/kg", key: "asKg", width: 20 }, // H
       { header: "Alloy surcharge in €/mt", key: "asM", width: 20 }, // I
       { header: "Prezzo unitario", key: "pu", width: 16 }, // J
