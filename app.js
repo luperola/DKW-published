@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { loadCatalog } from "./catalogLoader.js";
 import multer from "multer";
+import open from "open";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -147,7 +148,7 @@ app.post("/api/export", async (req, res) => {
       const qty = Number(item.quantity || 0);
 
       const base = Number(
-        (isTube ? item.basePricePerM : item.basePricePerPc) || 0
+        (isTube ? item.basePricePerM : item.basePricePerPc) || 0,
       );
       const peso = isTube ? Number(item.pesoKgM || 0) : null;
       const asKg = isTube ? Number(item.alloySurchargePerKg || 0) : null;
@@ -347,7 +348,7 @@ app.post("/api/export", async (req, res) => {
     const buf = await wb.xlsx.writeBuffer();
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader("Content-Disposition", 'attachment; filename="Offerta.xlsx"');
     return res.send(Buffer.from(buf));
@@ -371,10 +372,17 @@ app.post("/api/reload", (req, res) => {
   });
 });
 
-app.listen(3000, () => console.log("Server su http://localhost:3000"));
-/* app.listen(3001, () =>
-  console.log("Dockweiler Semi running on http://localhost:3001")
-); */
+app.listen(3000, async () => {
+  const url = "http://localhost:3000";
+
+  console.log(`Server su ${url}`);
+
+  try {
+    await open(url, { app: { name: "chrome" } });
+  } catch (err) {
+    await open(url);
+  }
+});
 
 // ===== Import Excel per ripopolare la tabella =================================
 app.post("/api/import", upload.single("file"), async (req, res) => {
